@@ -55,17 +55,26 @@ if(file.exists(mpath)){
   nd <- data.frame(period=factor(c("Baseline","Monitoring"), levels=c("Baseline","Monitoring")))
   pp <- fitted(m, newdata=nd, re_formula=NA, summary=TRUE)
   cats <- dimnames(pp)[[3]]
+  clean_cat <- function(x) { x <- gsub("^P\\(Y = ", "", x); gsub("\\)$", "", x) }  # "P(Y = Low Risk/Safe)" -> "Low Risk/Safe"
   rows <- list()
   for(i in 1:2) for(ct in cats) rows[[length(rows)+1]] <- data.frame(
-    period=nd$period[i], risk=ct, est=pp[i,"Estimate",ct], lo=pp[i,"Q2.5",ct], hi=pp[i,"Q97.5",ct])
+    period=nd$period[i], risk=clean_cat(ct), est=pp[i,"Estimate",ct], lo=pp[i,"Q2.5",ct], hi=pp[i,"Q97.5",ct])
   pdf_df <- bind_rows(rows) |> mutate(risk=factor(risk, levels=LEV4))
-  ggplot(pdf_df, aes(period, est, fill=risk)) +
-    geom_col(position="dodge", color="black") +
-    geom_errorbar(aes(ymin=lo, ymax=hi), position=position_dodge(width=0.9), width=0.2) +
-    scale_fill_brewer(palette=pal) + theme_minimal() + theme(text=element_text(size=11)) +
-    labs(title="Predicted Probabilities of E. coli Risk Levels by Monitoring Status",
-         x="Intervention Period", y="Predicted Probability", fill="E. coli Risk")
-  ggsave(file.path(OUT,"predicted_prob.pdf"), width=8, height=6)
+  stopifnot(!any(is.na(pdf_df$risk)))   # guard: every category must map to a known level
+  dodge <- position_dodge(width=0.7)
+  ggplot(pdf_df, aes(risk, est, fill=period)) +
+    geom_col(position=dodge, width=0.65) +
+    geom_errorbar(aes(ymin=lo, ymax=hi), position=dodge, width=0.18, linewidth=0.4, colour="grey30") +
+    geom_text(aes(label=sprintf("%.2f", est), y=hi), position=dodge, vjust=-0.6, size=3, colour="grey25") +
+    scale_fill_manual(values=c(Baseline="#D95F02", Monitoring="#1B9E77")) +
+    scale_y_continuous(limits=c(0,1), breaks=seq(0,1,0.2), expand=expansion(mult=c(0,0.08))) +
+    theme_minimal(base_size=12) +
+    theme(panel.grid.major.x=element_blank(), legend.position="top",
+          legend.title=element_blank(), axis.text.x=element_text(size=10)) +
+    labs(title="Predicted probability of each E. coli risk level, by intervention period",
+         subtitle="Institutional filter projects (model-estimated; error bars are 95% credible intervals)",
+         x="E. coli risk category", y="Predicted probability")
+  ggsave(file.path(OUT,"predicted_prob.pdf"), width=8, height=5)
   cat("predicted_prob.pdf written\n")
 } else cat("model.rds not found — run model first for predicted_prob.pdf\n")
 
