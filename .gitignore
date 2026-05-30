@@ -1,0 +1,6 @@
+# Generated analysis artifacts (reproducible via the scripts)
+*.rds
+figures/*.pdf
+.Rhistory
+.RData
+.Rproj.user/
