@@ -1,9 +1,9 @@
 # ============================================================
 # RQ3 re-analysis — config-driven prep against LIVE mWater grids
-# Data source: data/*.csv
+# Data source: /Users/ethomas/Dropbox/Claude/rq3-repro/mwater_live/*.csv
 # ============================================================
 suppressMessages({library(readr); library(dplyr); library(janitor); library(tidyr); library(stringr)})
-LIVE <- "data"
+LIVE <- "/Users/ethomas/Dropbox/Claude/rq3-repro/mwater_live"
 rd <- function(f) suppressWarnings(read_csv(file.path(LIVE, f), show_col_types = FALSE, progress = FALSE)) |> clean_names()
 
 # ---- canonical risk recode (4-level WHO) ----
@@ -87,10 +87,16 @@ bur_base <- rd("Burundi_WQ.csv") |> filter(deployment=="Baseline March 2026") |>
 wm_base <- rd("WaterMission_baseline.csv")  # site, ecoli_cfu, ecoli_pa
 
 # ============================================================
-# HELVETAS (Madagascar): baseline household only (re-monitoring pending July 2026)
+# HELVETAS (Madagascar): baseline (Apr 2025) vs monitoring (Internal campaign Oct 2025).
+# Ignore "Post_ Baseline_test_2025". Now a before/after case.
 # ============================================================
-hel <- rd("Helvetas_WQ.csv") |> filter(what_type_of_water_source_was=="Baseline Household") |>
-  transmute(risk=relab(ecoli_risk))
+hel_raw <- rd("Helvetas_WQ.csv") |> mutate(risk=relab(ecoli_risk)) |>
+  filter(risk %in% LEV4)
+hel   <- hel_raw |> filter(deployment=="April 2025_ Baseline") |> transmute(risk)  # baseline (general baseline char.)
+hel_b <- hel_raw |> filter(deployment=="April 2025_ Baseline") |> transmute(risk, period="Baseline")
+hel_m <- hel_raw |> filter(deployment=="Internal campaign October 2025") |> transmute(risk, period="Monitoring")
+helvetas <- bind_rows(hel_b, hel_m) |>
+  mutate(risk=factor(risk, levels=LEV4), period=factor(period, levels=c("Baseline","Monitoring")))
 
 # ============================================================
 # GENERAL BASELINE (5 projects, baseline rounds only)
@@ -110,8 +116,8 @@ base5 <- bind_rows(
   mwa_base |> transmute(risk=ifelse(ecoli_pa=="Present","Generally unsafe (E. coli present)*","Low Risk/Safe"), project="DRIP-FUNDI - Kenya*")
 )
 
-saveRDS(list(inst=inst, asili=asili, drip_traj=drip_traj, hel=hel, wm_base=wm_base, bur_base=bur_base, base5=base5,
-             ls_cohort=ls_cohort, am_cohort=am_cohort), "prepped.rds")
+saveRDS(list(inst=inst, asili=asili, drip_traj=drip_traj, hel=hel, helvetas=helvetas, wm_base=wm_base, bur_base=bur_base, base5=base5,
+             ls_cohort=ls_cohort, am_cohort=am_cohort), "/Users/ethomas/Dropbox/Claude/rq3-repro/prepped.rds")
 
 # ============================================================
 # REPORT
