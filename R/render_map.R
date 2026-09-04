@@ -31,16 +31,32 @@ map_data <- rbindlist(list(
   pts(grid("0fe1a4c959dc49d0b842550dd526c15d"), "Water Mission - Tanzania")
 ), use.names = TRUE)
 
-# Drop GPS-entry errors that fall outside the East/Central Africa study region
-# (a handful of points land in the Atlantic/Arctic and otherwise blow out the map).
+# Drop GPS-entry errors. A bounding box is not enough: one LifeStraw school is
+# geocoded to eastern Zimbabwe, which sits inside any box wide enough to hold
+# Madagascar. Keep only points that fall within one of the six study countries.
 n_before <- nrow(map_data)
-study_box <- list(lon = c(20, 50), lat = c(-26, 12))
+study_box <- list(lon = c(27, 50), lat = c(-26, 12))
 map_data <- map_data[Longitude %between% study_box$lon & Latitude %between% study_box$lat]
+
+africa <- ne_countries(scale = "medium", continent = "Africa", returnclass = "sf")
+study_countries <- c("Kenya", "Rwanda", "Burundi", "Tanzania",
+                     "Dem. Rep. Congo", "Democratic Republic of the Congo", "Madagascar")
+study_sf <- africa[africa$name %in% study_countries | africa$admin %in% study_countries, ]
+# Buffer by 0.25 degrees (~28 km) so that coarse country outlines and genuine
+# border-adjacent sites are retained; the Zimbabwe point is ~900 km from the
+# nearest study country and is still excluded.
+study_union <- suppressWarnings(st_buffer(st_union(study_sf), 0.25))
+map_sf_all <- st_as_sf(map_data, coords = c("Longitude","Latitude"), crs = 4326)
+in_study <- lengths(suppressMessages(st_intersects(map_sf_all, study_union))) > 0
+if (any(!in_study)) {
+  cat("dropped points outside the six study countries:\n")
+  print(cbind(map_data[!in_study], st_coordinates(map_sf_all[!in_study, ])))
+}
+map_data <- map_data[in_study]
 cat(sprintf("dropped %d out-of-region points (GPS errors)\n", n_before - nrow(map_data)))
 cat("points per project:\n"); print(map_data[, .N, by = Label])
 
 map_sf <- st_as_sf(map_data, coords = c("Longitude","Latitude"), crs = 4326)
-africa <- ne_countries(scale = "medium", continent = "Africa", returnclass = "sf")
 cent <- suppressWarnings(st_point_on_surface(africa))
 bb <- st_bbox(map_sf); pad <- 2
 
