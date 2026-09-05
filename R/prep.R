@@ -16,7 +16,7 @@ LEV4 <- c("Low Risk/Safe","Intermediate Risk","High Risk","Very High Risk/Unsafe
 
 # ---- DEPLOYMENT CONFIG (the agreed partitioning) ----
 LS_BASE <- "July 2024 Baseline"
-LS_MON  <- "September 2024 Monitoring"
+LS_MON  <- c("September 2024 Monitoring","Jan Monitoring 2026","May 2026 Monitoring") # routine, pooled
 AM_BASE <- "2023 Baseline"
 AM_MON  <- c("January 2026 Monitoring Campaign","2025 Valver monitoring campaign") # routine, pooled
 AM_EXCL <- c("July 2025 Cleaning Campaign","Contaminated Filters")                  # special campaigns -> verification narrative
@@ -29,7 +29,7 @@ AS_MON  <- "January 2025 - Monitoring"
 ls <- rd("LifeStraw_WQ.csv")
 ls_b <- ls |> filter(deployment==LS_BASE, water_point_or_filter=="Water point") |>
   transmute(school_id=as.character(school_id), risk=relab(ecoli_mpn_risk), period="Baseline", country="Kenya")
-ls_m <- ls |> filter(deployment==LS_MON,  water_point_or_filter=="Filter") |>
+ls_m <- ls |> filter(deployment %in% LS_MON, water_point_or_filter=="Filter") |>
   transmute(school_id=as.character(school_id), risk=relab(ecoli_mpn_risk), period="Monitoring", country="Kenya")
 # cohort restriction: schools present in BOTH
 ls_cohort <- intersect(ls_b$school_id, ls_m$school_id)
