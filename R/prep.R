@@ -15,7 +15,7 @@ relab <- function(x) dplyr::case_when(
 LEV4 <- c("Low Risk/Safe","Intermediate Risk","High Risk","Very High Risk/Unsafe")
 
 # ---- DEPLOYMENT CONFIG (the agreed partitioning) ----
-LS_BASE <- "July 2024 Baseline"
+LS_BASE <- c("July 2024 Baseline","January 2025 Baseline","Migori Baseline Surveys July 2025") # all pre-intervention cohorts
 LS_MON  <- c("September 2024 Monitoring","Jan Monitoring 2026","May 2026 Monitoring") # routine, pooled
 AM_BASE <- "2023 Baseline"
 AM_MON  <- c("January 2026 Monitoring Campaign","2025 Valver monitoring campaign") # routine, pooled
@@ -27,7 +27,7 @@ AS_MON  <- "January 2025 - Monitoring"
 # INSTITUTIONAL: LifeStraw + Amazi  (baseline vs pooled monitoring)
 # ============================================================
 ls <- rd("LifeStraw_WQ.csv")
-ls_b <- ls |> filter(deployment==LS_BASE, water_point_or_filter=="Water point") |>
+ls_b <- ls |> filter(deployment %in% LS_BASE, water_point_or_filter=="Water point") |>
   transmute(school_id=as.character(school_id), risk=relab(ecoli_mpn_risk), period="Baseline", country="Kenya")
 ls_m <- ls |> filter(deployment %in% LS_MON, water_point_or_filter=="Filter") |>
   transmute(school_id=as.character(school_id), risk=relab(ecoli_mpn_risk), period="Monitoring", country="Kenya")
